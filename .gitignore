@@ -4,3 +4,4 @@ uploads/
 exports/
 __pycache__/
 *.pyc
+.nicegui
