@@ -1,3 +1,4 @@
+import os
 from nicegui import ui, app
 from auth import AuthMiddleware
 from pages.login import login_page
@@ -19,8 +20,9 @@ def dashboard():
 
 ui.run(
     host="0.0.0.0",
-    port=8085,
+    port=int(os.environ.get("PORT", 8085)),
     title="PrestaShop Manager",
     storage_secret=STORAGE_SECRET,
-    reload=False,  # must be False on Render
+    reload=False,
+    max_upload_size=50 * 1024 * 1024,
 )

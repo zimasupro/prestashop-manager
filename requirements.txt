@@ -1,4 +1,4 @@
-nicegui
+nicegui==1.4.21
 pandas
 openpyxl
 requests
