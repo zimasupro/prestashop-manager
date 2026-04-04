@@ -9,6 +9,11 @@ unrestricted_routes = {"/"}
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if not app.storage.user.get("authenticated", False):
-            if request.url.path not in unrestricted_routes:
+            if (
+                not request.url.path.startswith("/_nicegui")
+                and not request.url.path.startswith("/socket.io")
+                and not request.url.path.startswith("/static")
+                and request.url.path not in unrestricted_routes
+            ):
                 return RedirectResponse("/")
         return await call_next(request)

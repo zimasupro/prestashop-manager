@@ -21,8 +21,9 @@ def dashboard():
 if __name__ in {"__main__", "__mp_main__"}:
     ui.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8080)),  # Railway injects PORT automatically
+        port=int(os.environ.get("PORT", 8080)),
         title="PrestaShop Manager",
         storage_secret=STORAGE_SECRET,
         reload=False,
+        ws_max_size=16777216,
     )
