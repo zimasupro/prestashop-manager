@@ -80,7 +80,9 @@ def export_products_csv(fields=None):
     remaining = [c for c in df.columns if c not in ordered_cols]
     df = df[ordered_cols + remaining]
 
-    os.makedirs("exports", exist_ok=True)
-    path = "exports/products.csv"
+    # Use /tmp so it works on Railway (ephemeral filesystem is fine here
+    # since the file only needs to exist long enough for ui.download() to trigger)
+    os.makedirs("/tmp/exports", exist_ok=True)
+    path = "/tmp/exports/products.csv"
     df.to_csv(path, index=False, encoding="utf-8-sig")
     return path

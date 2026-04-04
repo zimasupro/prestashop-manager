@@ -5,3 +5,5 @@ exports/
 __pycache__/
 *.pyc
 .nicegui
+*.pyo
+.DS_Store
