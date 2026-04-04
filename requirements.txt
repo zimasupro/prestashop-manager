@@ -4,5 +4,3 @@ openpyxl
 requests
 python-dotenv
 beautifulsoup4
-uvicorn
-aiofiles

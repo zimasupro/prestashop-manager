@@ -18,11 +18,11 @@ def dashboard():
     dashboard_page()
 
 
-ui.run(
-    host="0.0.0.0",
-    port=int(os.environ.get("PORT", 8085)),
-    title="PrestaShop Manager",
-    storage_secret=STORAGE_SECRET,
-    reload=False,
-    max_upload_size=50 * 1024 * 1024,
-)
+if __name__ in {"__main__", "__mp_main__"}:
+    ui.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
+        title="PrestaShop Manager",
+        storage_secret=STORAGE_SECRET,
+        reload=False,
+    )
