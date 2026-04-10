@@ -18,9 +18,10 @@ def index():
 def dashboard():
     dashboard_page()
 
-    @ui.page("/setup")
-    def setup():
-        setup_page()
+
+@ui.page("/setup")
+def setup():
+    setup_page()
 
 
 if __name__ in {"__main__", "__mp_main__"}:
