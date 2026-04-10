@@ -21,6 +21,7 @@ def _get(endpoint, params=None):
         f"{url}/{endpoint}",
         auth=auth,
         params={"output_format": "JSON", "display": "full", **params},
+        timeout=10,
     )
     response.raise_for_status()
     return response.json()
@@ -28,7 +29,7 @@ def _get(endpoint, params=None):
 
 def _get_xml(endpoint):
     url, auth = _creds()
-    response = requests.get(f"{url}/{endpoint}", auth=auth)
+    response = requests.get(f"{url}/{endpoint}", auth=auth, timeout=10)
     response.raise_for_status()
     return response.text
 
@@ -40,6 +41,7 @@ def _patch(endpoint, xml_body: str):
         auth=auth,
         headers={"Content-Type": "text/xml"},
         data=xml_body.encode("utf-8"),
+        timeout=10,
     )
     response.raise_for_status()
     return response.text
@@ -52,6 +54,7 @@ def _post(endpoint, xml_body: str):
         auth=auth,
         headers={"Content-Type": "text/xml"},
         data=xml_body.encode("utf-8"),
+        timeout=10,
     )
     response.raise_for_status()
     return response.text
@@ -65,9 +68,7 @@ def get_languages():
 def get_products():
     url, auth = _creds()
     response = requests.get(
-        f"{url}/products",
-        auth=auth,
-        params={"output_format": "JSON"},
+        f"{url}/products", auth=auth, params={"output_format": "JSON"}, timeout=10
     )
     response.raise_for_status()
     return response.json().get("products", [])
@@ -75,8 +76,7 @@ def get_products():
 
 def get_product(product_id: int):
     data = _get(f"products/{product_id}")
-    products = data.get("products", [])
-    return products[0] if products else {}
+    return data.get("product", {})
 
 
 def get_product_xml(product_id: int):

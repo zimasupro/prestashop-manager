@@ -2,6 +2,10 @@ import os
 import pandas as pd
 from presta.client import get_products, get_languages, get_product
 from settings import MULTILANG_FIELDS, FLAT_FIELDS, COLUMN_ORDER
+import tempfile
+import uuid
+
+path = os.path.join(tempfile.gettempdir(), "products_export.csv")
 
 
 def flatten_multilang(value, lang_map):
@@ -83,6 +87,7 @@ def export_products_csv(fields=None):
     # Use /tmp so it works on Railway (ephemeral filesystem is fine here
     # since the file only needs to exist long enough for ui.download() to trigger)
     os.makedirs("/tmp/exports", exist_ok=True)
-    path = "/tmp/exports/products.csv"
+    filename = f"products_{uuid.uuid4().hex}.csv"
+    path = os.path.join(tempfile.gettempdir(), "exports", filename)
     df.to_csv(path, index=False, encoding="utf-8-sig")
     return path
