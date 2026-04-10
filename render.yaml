@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: prestashop-manager
-    runtime: docker
-    plan: free
-    healthCheckPath: /
