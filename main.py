@@ -6,8 +6,10 @@ from pages.dashboard import dashboard_page
 from config import STORAGE_SECRET
 from pages.setup import setup_page
 from fastapi import Response
+from pwa import init_pwa
 
 app.add_middleware(AuthMiddleware)
+init_pwa()
 
 
 @ui.page("/")
