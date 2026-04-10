@@ -4,6 +4,7 @@ from auth import AuthMiddleware
 from pages.login import login_page
 from pages.dashboard import dashboard_page
 from config import STORAGE_SECRET
+from pages.setup import setup_page
 
 app.add_middleware(AuthMiddleware)
 
@@ -16,6 +17,10 @@ def index():
 @ui.page("/dashboard")
 def dashboard():
     dashboard_page()
+
+    @ui.page("/setup")
+    def setup():
+        setup_page()
 
 
 if __name__ in {"__main__", "__mp_main__"}:

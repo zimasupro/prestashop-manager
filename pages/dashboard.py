@@ -26,8 +26,15 @@ def dashboard_page():
         languages = get_languages()
         lang_codes = [lang["iso_code"] for lang in languages]
     except Exception as e:
-        ui.notify(f"{t('export_presta_failed')}: {e}", type="negative", position="top")
-        lang_codes = []
+        with ui.column().classes("w-full max-w-lg mx-auto p-8 gap-4 items-center"):
+            ui.icon("cloud_off", size="4rem").classes("text-red-400")
+            ui.label("Could not connect to PrestaShop").classes("text-xl font-semibold")
+            ui.label(str(e)).classes("text-sm text-gray-500 text-center")
+            ui.button(
+                "Re-configure credentials",
+                on_click=lambda: ui.navigate.to("/setup"),
+            ).props("unelevated color=primary")
+        return
 
     options = build_field_options(lang_codes)
     selected_fields = {field: field in DEFAULT_EXPORT_FIELDS for field in options}
