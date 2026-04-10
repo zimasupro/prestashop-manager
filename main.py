@@ -5,6 +5,7 @@ from pages.login import login_page
 from pages.dashboard import dashboard_page
 from config import STORAGE_SECRET
 from pages.setup import setup_page
+from fastapi import Response
 
 app.add_middleware(AuthMiddleware)
 
@@ -22,6 +23,11 @@ def dashboard():
 @ui.page("/setup")
 def setup():
     setup_page()
+
+
+@app.get("/health")
+def health():
+    return Response("OK", status_code=200)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
