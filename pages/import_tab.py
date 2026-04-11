@@ -91,32 +91,64 @@ def import_tab():
             return
 
         def handle_confirm():
-            result = import_products_csv(state.clean_df, dry_run=False)
-            with ui.card().classes("w-full p-4 mt-2"):
-                label = (
-                    t("import_with_errors")
-                    if result["errors"]
-                    else t("import_complete")
+            confirm_btn.props("loading disabled")
+            try:
+                result = import_products_csv(state.clean_df, dry_run=False)
+                confirm_btn.props(remove="loading disabled")
+
+                updated = len(result["to_update"])
+                created = len(result["to_create"])
+                errors = len(result["errors"])
+
+                if result["errors"]:
+                    ui.notify(
+                        f"⚠️ Import done with {errors} error(s) — {updated} updated, {created} created",
+                        type="warning",
+                        position="top",
+                        timeout=6000,
+                    )
+                else:
+                    ui.notify(
+                        f"✅ Import complete — {updated} updated, {created} created",
+                        type="positive",
+                        position="top",
+                        timeout=5000,
+                    )
+
+                with ui.card().classes("w-full p-4 mt-2"):
+                    label = (
+                        t("import_with_errors")
+                        if result["errors"]
+                        else t("import_complete")
+                    )
+                    color = "text-yellow-600" if result["errors"] else "text-green-600"
+                    ui.label(label).classes(f"font-semibold {color} mb-2")
+                    _stats_row(
+                        result,
+                        [
+                            ("to_update", t("updated"), "text-primary"),
+                            ("to_create", t("created"), "text-green-600"),
+                            ("errors", t("errors"), "text-red-500"),
+                        ],
+                    )
+                    for err in result["errors"]:
+                        ui.label(f"• {err}").classes("text-yellow-600 text-sm mt-1")
+                action_row.delete()
+
+            except Exception as ex:
+                confirm_btn.props(remove="loading disabled")
+                ui.notify(
+                    f"❌ {t('unexpected_error')}: {ex}",
+                    type="negative",
+                    position="top",
+                    timeout=8000,
                 )
-                color = "text-yellow-600" if result["errors"] else "text-green-600"
-                ui.label(label).classes(f"font-semibold {color} mb-2")
-                _stats_row(
-                    result,
-                    [
-                        ("to_update", t("updated"), "text-primary"),
-                        ("to_create", t("created"), "text-green-600"),
-                        ("errors", t("errors"), "text-red-500"),
-                    ],
-                )
-                for err in result["errors"]:
-                    ui.label(f"• {err}").classes("text-yellow-600 text-sm mt-1")
-            action_row.delete()
 
         with ui.row().classes("w-full justify-between mt-4") as action_row:
             ui.button(t("cancel"), on_click=handle_cancel, icon="close").props(
                 "flat dense color=negative"
             )
-            ui.button(t("confirm_import"), on_click=handle_confirm).props(
+            confirm_btn = ui.button(t("confirm_import"), on_click=handle_confirm).props(
                 "color=primary unelevated icon=upload"
             )
 

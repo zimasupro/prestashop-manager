@@ -336,3 +336,31 @@ class TestBuildProductXml:
         xml = _build_product_xml(1, {"price": "5.00"}, LANG_MAP_CLIENT)
         assert "<prestashop" in xml
         assert "<product>" in xml
+
+
+class TestImportProductsCsvRealRun:
+
+    def _make_update_df(self):
+        return pd.DataFrame(
+            {
+                "id": [42],
+                "name_en": ["Test Product"],
+                "price": [19.99],
+            }
+        )
+
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch(
+        "etl.importer.patch_product",
+        return_value={"ok": False, "error": "401 Unauthorized"},
+    )
+    def test_failed_patch_goes_to_errors(self, mock_patch, mock_langs):
+        report = import_products_csv(self._make_update_df(), dry_run=False)
+        assert len(report["errors"]) == 1
+        assert "42" in report["errors"][0] or "401" in report["errors"][0]
+
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.patch_product", return_value={"ok": True})
+    def test_successful_patch_not_in_errors(self, mock_patch, mock_langs):
+        report = import_products_csv(self._make_update_df(), dry_run=False)
+        assert len(report["errors"]) == 0
