@@ -153,7 +153,12 @@ def get_products() -> dict:
             timeout=10,
         )
         response.raise_for_status()
-        products = response.json().get("products", [])
+        data = response.json()
+        # PrestaShop returns a list directly when limit=0
+        if isinstance(data, list):
+            products = data
+        else:
+            products = data.get("products", [])
         if not products:
             return _err("No products found in PrestaShop. The catalog may be empty.")
         return _ok(products)
