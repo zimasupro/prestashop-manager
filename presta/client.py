@@ -34,55 +34,80 @@ JSON_HEADERS = {
 
 
 def _creds():
-    """Returns (url, auth) or raises — internal only, always called inside guarded functions."""
+    """
+    Returns (url, auth, extra_params) or raises.
+
+    Two auth scenarios:
+      1. Server has HTTP Basic Auth (e.g. staging protection):
+         - auth = HTTPBasicAuth(http_user, http_pass)  ← server layer
+         - PS API key passed as ws_key query param     ← PrestaShop layer
+
+      2. No server auth (localhost / open server):
+         - auth = HTTPBasicAuth(ps_api_key, "")        ← PS layer only
+    """
     url = app.storage.user.get("presta_url", "").rstrip("/")
     key = app.storage.user.get("presta_api_key", "")
+    http_user = app.storage.user.get("http_user", "").strip()
+    http_pass = app.storage.user.get("http_pass", "").strip()
+
     if not url or not key:
         raise RuntimeError("PrestaShop credentials not configured. Go to /setup.")
-    # Guard: ensure /api suffix is always present
+
     if not url.endswith("/api"):
         url = url + "/api"
-    return url, HTTPBasicAuth(key, "")
+
+    if http_user:
+        # Server-level Basic Auth present — pass server creds as Basic Auth
+        # and PS API key as ws_key query param so PrestaShop still sees it.
+        auth = HTTPBasicAuth(http_user, http_pass)
+        extra_params = {"ws_key": key}
+    else:
+        # No server auth — PS API key is the Basic Auth username.
+        auth = HTTPBasicAuth(key, "")
+        extra_params = {}
+
+    return url, auth, extra_params
 
 
 # ─────────────────────────────────────────────
-# Internal: raw HTTP helpers (still raise — consumed by guarded public functions)
+# Internal: raw HTTP helpers
 # ─────────────────────────────────────────────
 
 
 def _get(endpoint, params=None):
     if params is None:
         params = {}
-    url, auth = _creds()
+    url, auth, extra_params = _creds()
     response = requests.get(
         f"{url}/{endpoint}",
         auth=auth,
         headers=JSON_HEADERS,
-        params={"display": "full", **params},
+        params={"display": "full", **extra_params, **params},
         timeout=10,
     )
-    # DEBUG — remove after fix
-    if response.status_code == 406:
-        print(f"DEBUG 406 URL: {response.url}")
-        print(f"DEBUG 406 Headers: {dict(response.headers)}")
-        print(f"DEBUG 406 Body: {response.text[:500]}")
     response.raise_for_status()
     return response.json()
 
 
 def _get_xml(endpoint):
-    url, auth = _creds()
-    response = requests.get(f"{url}/{endpoint}", auth=auth, timeout=10)
+    url, auth, extra_params = _creds()
+    response = requests.get(
+        f"{url}/{endpoint}",
+        auth=auth,
+        params={**extra_params},
+        timeout=10,
+    )
     response.raise_for_status()
     return response.text
 
 
 def _patch(endpoint, xml_body: str):
-    url, auth = _creds()
+    url, auth, extra_params = _creds()
     response = requests.patch(
         f"{url}/{endpoint}",
         auth=auth,
         headers={"Content-Type": "text/xml"},
+        params={**extra_params},
         data=xml_body.encode("utf-8"),
         timeout=10,
     )
@@ -91,11 +116,12 @@ def _patch(endpoint, xml_body: str):
 
 
 def _post(endpoint, xml_body: str):
-    url, auth = _creds()
+    url, auth, extra_params = _creds()
     response = requests.post(
         f"{url}/{endpoint}",
         auth=auth,
         headers={"Content-Type": "text/xml"},
+        params={**extra_params},
         data=xml_body.encode("utf-8"),
         timeout=10,
     )
@@ -119,7 +145,7 @@ def _handle_exception(e: Exception) -> dict:
         status = e.response.status_code if e.response is not None else "unknown"
         if status == 401:
             return _err(
-                "PrestaShop rejected the API key (401 Unauthorized). Check your setup."
+                "Unauthorized (401). Check your Server Username/Password and API Key in setup."
             )
         if status == 403:
             return _err(
