@@ -162,6 +162,16 @@ class TestGetProducts:
         assert result["ok"] is False
         assert "credentials" in result["error"].lower()
 
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get")
+    def test_get_products_sends_limit_zero(self, mock_get, mock_creds):
+        from presta.client import get_products
+
+        mock_get.return_value = self._mock_response(MOCK_PRODUCTS_RESPONSE)
+        get_products()
+        call_params = mock_get.call_args[1]["params"]
+        assert call_params.get("limit") == "0"
+
 
 # ─────────────────────────────────────────────
 # SECTION 3: get_product()
@@ -170,32 +180,47 @@ class TestGetProducts:
 
 class TestGetProduct:
 
-    @patch("presta.client._get", return_value=MOCK_PRODUCT_RESPONSE)
-    def test_returns_product_on_success(self, mock_get):
+    def _mock_response(self, json_data, status=200):
+        mock = MagicMock()
+        mock.status_code = status
+        mock.json.return_value = json_data
+        mock.raise_for_status = MagicMock()
+        return mock
+
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get")
+    def test_returns_product_on_success(self, mock_get, mock_creds):
         from presta.client import get_product
 
+        mock_get.return_value = self._mock_response(MOCK_PRODUCT_RESPONSE)
         result = get_product(1)
         assert result["ok"] is True
         assert result["value"]["id"] == "1"
 
-    @patch("presta.client._get", return_value={"product": {}})
-    def test_empty_product_returns_error(self, mock_get):
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get")
+    def test_empty_product_returns_error(self, mock_get, mock_creds):
         from presta.client import get_product
 
+        mock_get.return_value = self._mock_response({"product": {}})
         result = get_product(999)
         assert result["ok"] is False
         assert "not found" in result["error"].lower()
 
-    @patch("presta.client._get", side_effect=make_http_error(404))
-    def test_404_returns_not_found_error(self, mock_get):
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get")
+    def test_404_returns_not_found_error(self, mock_get, mock_creds):
         from presta.client import get_product
 
+        mock_get.return_value = self._mock_response({}, status=404)
+        mock_get.return_value.raise_for_status.side_effect = make_http_error(404)
         result = get_product(999)
         assert result["ok"] is False
         assert "404" in result["error"]
 
-    @patch("presta.client._get", side_effect=Timeout())
-    def test_timeout_returns_error(self, mock_get):
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get", side_effect=Timeout())
+    def test_timeout_returns_error(self, mock_get, mock_creds):
         from presta.client import get_product
 
         result = get_product(1)
@@ -204,11 +229,13 @@ class TestGetProduct:
 
     @patch("presta.client._creds", return_value=MOCK_CREDS)
     @patch("requests.get")
-    def test_get_products_sends_limit_zero(self, mock_get, mock_creds):
-        mock_get.return_value = self._mock_response(MOCK_PRODUCTS_RESPONSE)
-        get_products()
+    def test_get_product_does_not_use_display_full(self, mock_get, mock_creds):
+        from presta.client import get_product
+
+        mock_get.return_value = self._mock_response(MOCK_PRODUCT_RESPONSE)
+        get_product(1)
         call_params = mock_get.call_args[1]["params"]
-        assert call_params.get("limit") == "0"
+        assert "display" not in call_params
 
 
 # ─────────────────────────────────────────────
