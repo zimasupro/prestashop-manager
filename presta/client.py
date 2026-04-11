@@ -58,9 +58,14 @@ def _get(endpoint, params=None):
         f"{url}/{endpoint}",
         auth=auth,
         headers=JSON_HEADERS,
-        params={"display": "full", **params},  # output_format moved to header
+        params={"display": "full", **params},
         timeout=10,
     )
+    # DEBUG — remove after fix
+    if response.status_code == 406:
+        print(f"DEBUG 406 URL: {response.url}")
+        print(f"DEBUG 406 Headers: {dict(response.headers)}")
+        print(f"DEBUG 406 Body: {response.text[:500]}")
     response.raise_for_status()
     return response.json()
 
