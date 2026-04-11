@@ -26,7 +26,11 @@ def _err(message: str):
 # Internal: credentials
 # ─────────────────────────────────────────────
 
-JSON_HEADERS = {"Accept": "application/json"}
+# PS 8.1+ requires Output-Format as a header, not a query param
+JSON_HEADERS = {
+    "Accept": "application/json",
+    "Output-Format": "JSON",
+}
 
 
 def _creds():
@@ -54,7 +58,7 @@ def _get(endpoint, params=None):
         f"{url}/{endpoint}",
         auth=auth,
         headers=JSON_HEADERS,
-        params={"output_format": "JSON", "display": "full", **params},
+        params={"display": "full", **params},  # output_format moved to header
         timeout=10,
     )
     response.raise_for_status()
@@ -158,7 +162,6 @@ def get_languages() -> dict:
 def get_products() -> dict:
     try:
         data = _get("products", params={"limit": "0"})
-        # PrestaShop returns a list directly when limit=0
         if isinstance(data, list):
             products = data
         else:
