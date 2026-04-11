@@ -149,7 +149,7 @@ def get_products() -> dict:
         response = requests.get(
             f"{url}/products",
             auth=auth,
-            params={"output_format": "JSON"},
+            params={"output_format": "JSON", "limit": "0"},
             timeout=10,
         )
         response.raise_for_status()
@@ -167,7 +167,7 @@ def get_product(product_id: int) -> dict:
         response = requests.get(
             f"{url}/products/{product_id}",
             auth=auth,
-            params={"output_format": "JSON"},  # no display=full
+            params={"output_format": "JSON"},
             timeout=10,
         )
         response.raise_for_status()

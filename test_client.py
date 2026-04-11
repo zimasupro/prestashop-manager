@@ -202,6 +202,14 @@ class TestGetProduct:
         assert result["ok"] is False
         assert "timeout" in result["error"].lower()
 
+    @patch("presta.client._creds", return_value=MOCK_CREDS)
+    @patch("requests.get")
+    def test_get_products_sends_limit_zero(self, mock_get, mock_creds):
+        mock_get.return_value = self._mock_response(MOCK_PRODUCTS_RESPONSE)
+        get_products()
+        call_params = mock_get.call_args[1]["params"]
+        assert call_params.get("limit") == "0"
+
 
 # ─────────────────────────────────────────────
 # SECTION 4: patch_product() and create_product()
