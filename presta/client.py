@@ -163,8 +163,15 @@ def get_products() -> dict:
 
 def get_product(product_id: int) -> dict:
     try:
-        data = _get(f"products/{product_id}")
-        product = data.get("product", {})
+        url, auth = _creds()
+        response = requests.get(
+            f"{url}/products/{product_id}",
+            auth=auth,
+            params={"output_format": "JSON"},  # no display=full
+            timeout=10,
+        )
+        response.raise_for_status()
+        product = response.json().get("product", {})
         if not product:
             return _err(f"Product {product_id} not found in PrestaShop.")
         return _ok(product)
