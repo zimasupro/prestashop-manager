@@ -149,12 +149,11 @@ def get_products() -> dict:
         response = requests.get(
             f"{url}/products",
             auth=auth,
-            params={"output_format": "JSON", "limit": "0"},
+            params={"output_format": "JSON"},
             timeout=10,
         )
         response.raise_for_status()
         data = response.json()
-        print("RAW get_products response:", type(data), str(data)[:200])
         # PrestaShop returns a list directly when limit=0
         if isinstance(data, list):
             products = data
