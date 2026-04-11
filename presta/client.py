@@ -26,6 +26,8 @@ def _err(message: str):
 # Internal: credentials
 # ─────────────────────────────────────────────
 
+JSON_HEADERS = {"Accept": "application/json"}
+
 
 def _creds():
     """Returns (url, auth) or raises — internal only, always called inside guarded functions."""
@@ -33,6 +35,9 @@ def _creds():
     key = app.storage.user.get("presta_api_key", "")
     if not url or not key:
         raise RuntimeError("PrestaShop credentials not configured. Go to /setup.")
+    # Guard: ensure /api suffix is always present
+    if not url.endswith("/api"):
+        url = url + "/api"
     return url, HTTPBasicAuth(key, "")
 
 
@@ -48,6 +53,7 @@ def _get(endpoint, params=None):
     response = requests.get(
         f"{url}/{endpoint}",
         auth=auth,
+        headers=JSON_HEADERS,
         params={"output_format": "JSON", "display": "full", **params},
         timeout=10,
     )
@@ -112,7 +118,13 @@ def _handle_exception(e: Exception) -> dict:
             )
         if status == 404:
             return _err(
-                f"PrestaShop resource not found (404). Check the URL in your setup."
+                "PrestaShop resource not found (404). Check the URL in your setup."
+            )
+        if status == 406:
+            return _err(
+                "PrestaShop refused the request format (406 Not Acceptable). "
+                "Make sure your URL ends with /api and the webservice is enabled "
+                "in Advanced Parameters → Webservice."
             )
         if status == 500:
             return _err(
@@ -145,15 +157,7 @@ def get_languages() -> dict:
 
 def get_products() -> dict:
     try:
-        url, auth = _creds()
-        response = requests.get(
-            f"{url}/products",
-            auth=auth,
-            params={"output_format": "JSON"},
-            timeout=10,
-        )
-        response.raise_for_status()
-        data = response.json()
+        data = _get("products", params={"limit": "0"})
         # PrestaShop returns a list directly when limit=0
         if isinstance(data, list):
             products = data
@@ -168,15 +172,8 @@ def get_products() -> dict:
 
 def get_product(product_id: int) -> dict:
     try:
-        url, auth = _creds()
-        response = requests.get(
-            f"{url}/products/{product_id}",
-            auth=auth,
-            params={"output_format": "JSON"},
-            timeout=10,
-        )
-        response.raise_for_status()
-        product = response.json().get("product", {})
+        data = _get(f"products/{product_id}")
+        product = data.get("product", {})
         if not product:
             return _err(f"Product {product_id} not found in PrestaShop.")
         return _ok(product)
@@ -237,7 +234,7 @@ def _build_product_xml(product_id, fields: dict, lang_map: dict) -> str:
         matched = False
         for base in MULTILANG_SET:
             if col.startswith(f"{base}_"):
-                lang_code = col[len(base) + 1 :]
+                lang_code = col[len(base) + 1:]
                 if lang_code in code_to_id:
                     multilang_groups.setdefault(base, {})[lang_code] = str(value)
                     matched = True

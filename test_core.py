@@ -159,6 +159,9 @@ MOCK_LANGUAGES = [
     {"id": "2", "iso_code": "de"},
 ]
 
+# get_languages() returns {"ok": True, "value": [...]} — always wrap the mock
+MOCK_LANGUAGES_RESULT = {"ok": True, "value": MOCK_LANGUAGES}
+
 
 class TestBuildLangMap:
 
@@ -212,30 +215,30 @@ class TestImportProductsCsvDryRun:
             }
         )
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     def test_dry_run_does_not_call_patch(self, mock_langs):
         with patch("etl.importer.patch_product") as mock_patch:
             import_products_csv(self._make_update_df(), dry_run=True)
             mock_patch.assert_not_called()
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     def test_dry_run_detects_update(self, mock_langs):
         report = import_products_csv(self._make_update_df(), dry_run=True)
         assert len(report["to_update"]) == 1
         assert report["to_update"][0]["id"] == 42
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     def test_dry_run_detects_create(self, mock_langs):
         report = import_products_csv(self._make_create_df(), dry_run=True)
         assert len(report["to_create"]) == 1
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     def test_invalid_id_is_skipped(self, mock_langs):
         df = pd.DataFrame({"id": ["abc"], "name_en": ["Bad"]})
         report = import_products_csv(df, dry_run=True)
         assert len(report["skipped"]) == 1
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     def test_dry_run_flag_in_report(self, mock_langs):
         report = import_products_csv(self._make_update_df(), dry_run=True)
         assert report["dry_run"] is True
@@ -325,7 +328,6 @@ class TestBuildProductXml:
     def test_empty_fields_not_included(self):
         fields = {"price": "10.00", "name_en": ""}
         xml = _build_product_xml(1, fields, LANG_MAP_CLIENT)
-        # empty name_en should be skipped
         assert "name_en" not in xml
 
     def test_xml_declaration_present(self):
@@ -338,6 +340,10 @@ class TestBuildProductXml:
         assert "<product>" in xml
 
 
+# ============================================================
+# SECTION 5: importer.py — real run (dry_run=False)
+# ============================================================
+
 class TestImportProductsCsvRealRun:
 
     def _make_update_df(self):
@@ -349,7 +355,7 @@ class TestImportProductsCsvRealRun:
             }
         )
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     @patch(
         "etl.importer.patch_product",
         return_value={"ok": False, "error": "401 Unauthorized"},
@@ -359,8 +365,15 @@ class TestImportProductsCsvRealRun:
         assert len(report["errors"]) == 1
         assert "42" in report["errors"][0] or "401" in report["errors"][0]
 
-    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES)
+    @patch("etl.importer.get_languages", return_value=MOCK_LANGUAGES_RESULT)
     @patch("etl.importer.patch_product", return_value={"ok": True})
     def test_successful_patch_not_in_errors(self, mock_patch, mock_langs):
         report = import_products_csv(self._make_update_df(), dry_run=False)
         assert len(report["errors"]) == 0
+
+    @patch("etl.importer.get_languages", return_value={"ok": False, "error": "401 Unauthorized"})
+    def test_languages_failure_returns_error_report(self, mock_langs):
+        """If get_languages() fails, import should return an error report not crash."""
+        report = import_products_csv(self._make_update_df(), dry_run=False)
+        assert len(report["errors"]) == 1
+        assert "languages" in report["errors"][0].lower()
