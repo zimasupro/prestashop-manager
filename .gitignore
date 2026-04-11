@@ -7,3 +7,11 @@ __pycache__/
 .nicegui
 *.pyo
 .DS_Store
+.pytest_cache/
+htmlcov/
+.coverage
+/exports/
+ngrok.exe
+ngrok.zip
+*.exe
+*.zip

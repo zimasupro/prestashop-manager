@@ -31,8 +31,8 @@ def clean_html(raw_html: str) -> tuple[str, list[str]]:
             changes.append("normalized h1 → h2")
 
     cleaned = str(soup)
-    if "&nbsp;" in cleaned:
-        cleaned = cleaned.replace("&nbsp;", " ")
+    if "&nbsp;" in cleaned or "\xa0" in cleaned:
+        cleaned = cleaned.replace("&nbsp;", " ").replace("\xa0", " ")
         changes.append("replaced &nbsp; with spaces")
 
     cleaned = re.sub(r" {2,}", " ", cleaned)

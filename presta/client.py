@@ -1,16 +1,44 @@
 import requests
 from requests.auth import HTTPBasicAuth
+from requests.exceptions import Timeout, ConnectionError, HTTPError
 from xml.etree import ElementTree as ET
 from nicegui import app
 from settings import MULTILANG_FIELDS
 
 
+# ─────────────────────────────────────────────
+# Result type helpers
+# Every public function returns one of these:
+#   {"ok": True,  "value": data}
+#   {"ok": False, "error": "human readable string"}
+# ─────────────────────────────────────────────
+
+
+def _ok(value):
+    return {"ok": True, "value": value}
+
+
+def _err(message: str):
+    return {"ok": False, "error": message}
+
+
+# ─────────────────────────────────────────────
+# Internal: credentials
+# ─────────────────────────────────────────────
+
+
 def _creds():
+    """Returns (url, auth) or raises — internal only, always called inside guarded functions."""
     url = app.storage.user.get("presta_url", "").rstrip("/")
     key = app.storage.user.get("presta_api_key", "")
     if not url or not key:
         raise RuntimeError("PrestaShop credentials not configured. Go to /setup.")
     return url, HTTPBasicAuth(key, "")
+
+
+# ─────────────────────────────────────────────
+# Internal: raw HTTP helpers (still raise — consumed by guarded public functions)
+# ─────────────────────────────────────────────
 
 
 def _get(endpoint, params=None):
@@ -60,37 +88,119 @@ def _post(endpoint, xml_body: str):
     return response.text
 
 
-def get_languages():
-    data = _get("languages")
-    return data.get("languages", [])
+# ─────────────────────────────────────────────
+# Internal: exception → human readable error
+# ─────────────────────────────────────────────
 
 
-def get_products():
-    url, auth = _creds()
-    response = requests.get(
-        f"{url}/products", auth=auth, params={"output_format": "JSON"}, timeout=10
-    )
-    response.raise_for_status()
-    return response.json().get("products", [])
+def _handle_exception(e: Exception) -> dict:
+    if isinstance(e, Timeout):
+        return _err(
+            "PrestaShop took too long to respond (timeout). Check your connection."
+        )
+    if isinstance(e, ConnectionError):
+        return _err("Could not reach PrestaShop. Check the URL in your setup.")
+    if isinstance(e, HTTPError):
+        status = e.response.status_code if e.response is not None else "unknown"
+        if status == 401:
+            return _err(
+                "PrestaShop rejected the API key (401 Unauthorized). Check your setup."
+            )
+        if status == 403:
+            return _err(
+                "PrestaShop denied access (403 Forbidden). Check API key permissions."
+            )
+        if status == 404:
+            return _err(
+                f"PrestaShop resource not found (404). Check the URL in your setup."
+            )
+        if status == 500:
+            return _err(
+                "PrestaShop returned a server error (500). The shop may be down."
+            )
+        return _err(f"PrestaShop returned an unexpected error (HTTP {status}).")
+    if isinstance(e, RuntimeError):
+        return _err(str(e))
+    return _err(f"Unexpected error: {str(e)}")
 
 
-def get_product(product_id: int):
-    data = _get(f"products/{product_id}")
-    return data.get("product", {})
+# ─────────────────────────────────────────────
+# Public: guarded API functions
+# All return {"ok": True, "value": ...} or {"ok": False, "error": "..."}
+# ─────────────────────────────────────────────
 
 
-def get_product_xml(product_id: int):
-    return _get_xml(f"products/{product_id}")
+def get_languages() -> dict:
+    try:
+        data = _get("languages")
+        languages = data.get("languages", [])
+        if not languages:
+            return _err(
+                "No languages returned from PrestaShop. Check API key permissions."
+            )
+        return _ok(languages)
+    except Exception as e:
+        return _handle_exception(e)
 
 
-def patch_product(product_id: int, fields: dict, lang_map: dict):
-    xml_body = _build_product_xml(product_id, fields, lang_map)
-    return _patch(f"products/{product_id}", xml_body)
+def get_products() -> dict:
+    try:
+        url, auth = _creds()
+        response = requests.get(
+            f"{url}/products",
+            auth=auth,
+            params={"output_format": "JSON"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        products = response.json().get("products", [])
+        if not products:
+            return _err("No products found in PrestaShop. The catalog may be empty.")
+        return _ok(products)
+    except Exception as e:
+        return _handle_exception(e)
 
 
-def create_product(fields: dict, lang_map: dict):
-    xml_body = _build_product_xml(None, fields, lang_map)
-    return _post("products", xml_body)
+def get_product(product_id: int) -> dict:
+    try:
+        data = _get(f"products/{product_id}")
+        product = data.get("product", {})
+        if not product:
+            return _err(f"Product {product_id} not found in PrestaShop.")
+        return _ok(product)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def get_product_xml(product_id: int) -> dict:
+    try:
+        xml = _get_xml(f"products/{product_id}")
+        return _ok(xml)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def patch_product(product_id: int, fields: dict, lang_map: dict) -> dict:
+    try:
+        xml_body = _build_product_xml(product_id, fields, lang_map)
+        result = _patch(f"products/{product_id}", xml_body)
+        return _ok(result)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def create_product(fields: dict, lang_map: dict) -> dict:
+    try:
+        xml_body = _build_product_xml(None, fields, lang_map)
+        result = _post("products", xml_body)
+        return _ok(result)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+# ─────────────────────────────────────────────
+# Pure: XML builder — no guard needed, no side effects
+# ─────────────────────────────────────────────
 
 
 def _build_product_xml(product_id, fields: dict, lang_map: dict) -> str:

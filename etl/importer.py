@@ -36,8 +36,19 @@ def import_products_csv(df: pd.DataFrame, dry_run: bool = True) -> dict:
 
     Returns a report dict.
     """
-    languages = get_languages()
-    lang_map = _build_lang_map(languages)
+
+    # --- GUARDED: fetch languages ---
+    lang_result = get_languages()
+    if not lang_result["ok"]:
+        return {
+            "dry_run": dry_run,
+            "to_update": [],
+            "to_create": [],
+            "skipped": [],
+            "errors": [f"Could not fetch languages: {lang_result['error']}"],
+        }
+
+    lang_map = _build_lang_map(lang_result["value"])
 
     report = {
         "dry_run": dry_run,
@@ -87,15 +98,14 @@ def import_products_csv(df: pd.DataFrame, dry_run: bool = True) -> dict:
         if dry_run:
             continue
 
-        # --- ACTUAL PUSH ---
-        try:
-            if operation == "update":
-                patch_product(product_id, fields, lang_map)
-            else:
-                create_product(fields, lang_map)
-        except Exception as e:
-            report["errors"].append(
-                f"{'Product ' + str(product_id) if product_id else 'Row ' + str(idx)}: {e}"
-            )
+        # --- ACTUAL PUSH — guarded ---
+        if operation == "update":
+            result = patch_product(product_id, fields, lang_map)
+            if not result["ok"]:
+                report["errors"].append(f"Product {product_id}: {result['error']}")
+        else:
+            result = create_product(fields, lang_map)
+            if not result["ok"]:
+                report["errors"].append(f"Row {idx}: {result['error']}")
 
     return report

@@ -5,8 +5,6 @@ from settings import MULTILANG_FIELDS, FLAT_FIELDS, COLUMN_ORDER
 import tempfile
 import uuid
 
-path = os.path.join(tempfile.gettempdir(), "products_export.csv")
-
 
 def flatten_multilang(value, lang_map):
     if not value:
@@ -50,20 +48,34 @@ def flatten_multilang(value, lang_map):
 
 
 def export_products_csv(fields=None):
-    languages = get_languages()
-    lang_map = {int(lang["id"]): lang["iso_code"] for lang in languages}
+
+    # --- GUARDED: fetch languages ---
+    lang_result = get_languages()
+    if not lang_result["ok"]:
+        raise RuntimeError(f"Could not fetch languages: {lang_result['error']}")
+    lang_map = {int(lang["id"]): lang["iso_code"] for lang in lang_result["value"]}
+
     print("lang_map:", lang_map)
 
-    products = get_products()
+    # --- GUARDED: fetch products ---
+    products_result = get_products()
+    if not products_result["ok"]:
+        raise RuntimeError(f"Could not fetch products: {products_result['error']}")
+    products = products_result["value"]
+
     print("products count:", len(products))
     print("first product raw:", products[0] if products else "empty")
 
-    if not products:
-        raise ValueError("No products returned from PrestaShop")
-
     rows = []
     for p in products:
-        product = get_product(int(p["id"]))
+
+        # --- GUARDED: fetch individual product ---
+        product_result = get_product(int(p["id"]))
+        if not product_result["ok"]:
+            print(f"Skipping product {p['id']}: {product_result['error']}")
+            continue
+        product = product_result["value"]
+
         print("fetched product id:", p["id"], "keys:", list(product.keys())[:5])
         row = {}
         for key, value in product.items():
@@ -78,16 +90,24 @@ def export_products_csv(fields=None):
                     row[key] = value
         rows.append(row)
 
+    if not rows:
+        raise RuntimeError(
+            "No products could be exported. All products failed to fetch."
+        )
+
     df = pd.DataFrame(rows)
 
     ordered_cols = [c for c in COLUMN_ORDER if c in df.columns]
     remaining = [c for c in df.columns if c not in ordered_cols]
     df = df[ordered_cols + remaining]
 
-    # Use /tmp so it works on Railway (ephemeral filesystem is fine here
-    # since the file only needs to exist long enough for ui.download() to trigger)
     os.makedirs("/tmp/exports", exist_ok=True)
     filename = f"products_{uuid.uuid4().hex}.csv"
     path = os.path.join(tempfile.gettempdir(), "exports", filename)
     df.to_csv(path, index=False, encoding="utf-8-sig")
+
+    # --- GUARDED: verify file actually written ---
+    if not os.path.exists(path):
+        raise RuntimeError("Export file could not be written to disk.")
+
     return path

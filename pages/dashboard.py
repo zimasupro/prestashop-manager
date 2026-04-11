@@ -22,19 +22,20 @@ def build_field_options(lang_codes):
 def dashboard_page():
     ui.colors(primary=PRIMARY_COLOR)
 
-    try:
-        languages = get_languages()
-        lang_codes = [lang["iso_code"] for lang in languages]
-    except Exception as e:
+    # --- GUARDED: unwrap Result from get_languages ---
+    lang_result = get_languages()
+    if not lang_result["ok"]:
         with ui.column().classes("w-full max-w-lg mx-auto p-8 gap-4 items-center"):
             ui.icon("cloud_off", size="4rem").classes("text-red-400")
             ui.label("Could not connect to PrestaShop").classes("text-xl font-semibold")
-            ui.label(str(e)).classes("text-sm text-gray-500 text-center")
+            ui.label(lang_result["error"]).classes("text-sm text-gray-500 text-center")
             ui.button(
                 "Re-configure credentials",
                 on_click=lambda: ui.navigate.to("/setup"),
             ).props("unelevated color=primary")
         return
+
+    lang_codes = [lang["iso_code"] for lang in lang_result["value"]]
 
     options = build_field_options(lang_codes)
     selected_fields = {field: field in DEFAULT_EXPORT_FIELDS for field in options}
