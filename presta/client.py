@@ -154,6 +154,7 @@ def get_products() -> dict:
         )
         response.raise_for_status()
         data = response.json()
+        print("RAW get_products response:", type(data), str(data)[:200])
         # PrestaShop returns a list directly when limit=0
         if isinstance(data, list):
             products = data
