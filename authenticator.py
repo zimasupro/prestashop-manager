@@ -7,12 +7,6 @@ from env import APP_PASSWORD, APP_USERNAME
 
 UNRESTRICTED_ROUTES = {"/", "/setup"}
 
-if not APP_USERNAME:
-    raise ValueError("APP_USERNAME is required in .env")
-
-if not APP_PASSWORD:
-    raise ValueError("APP_PASSWORD is required in .env")
-
 
 def verify_credentials(username: str, password: str) -> bool:
     return username == APP_USERNAME and password == APP_PASSWORD

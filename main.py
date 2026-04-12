@@ -10,9 +10,6 @@ from pages.dashboard import dashboard_page
 from pages.login import login_page
 from pages.setup import setup_page
 
-if not STORAGE_SECRET:
-    raise ValueError("STORAGE_SECRET is required in .env")
-
 app.add_middleware(AuthMiddleware)
 
 if not os.path.isdir("static"):
