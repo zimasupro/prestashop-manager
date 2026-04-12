@@ -1,10 +1,6 @@
 import pandas as pd
-from presta.client import (
-    get_languages,
-    get_product,
-    patch_product,
-    create_product,
-)
+
+from presta.client import create_product, get_languages, get_product, patch_product
 from settings import REQUIRED_CREATE_FIELDS
 
 

@@ -1,12 +1,13 @@
 from nicegui import app
-from settings import TRANSLATIONS, DEFAULT_LANGUAGE
+
+from settings import DEFAULT_LANGUAGE, TRANSLATIONS
 
 
 def get_lang() -> str:
     return app.storage.user.get("lang", DEFAULT_LANGUAGE)
 
 
-def t(key: str) -> str:
+def translate(key: str) -> str:
     lang = get_lang()
     return TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE]).get(
         key, TRANSLATIONS["en"].get(key, key)

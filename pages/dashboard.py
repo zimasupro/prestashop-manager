@@ -1,14 +1,15 @@
 from nicegui import ui
+
 from etl.exporter import export_products_csv
 from presta.client import get_languages
 from settings import (
-    PRIMARY_COLOR,
-    DEFAULT_EXPORT_FIELDS,
     ALWAYS_INCLUDED_FIELDS,
-    MULTILANG_FIELDS,
+    DEFAULT_EXPORT_FIELDS,
     FLAT_FIELDS,
+    MULTILANG_FIELDS,
+    PRIMARY_COLOR,
 )
-from i18n import t, set_lang, get_lang
+from translator import get_lang, set_lang, t
 
 
 def build_field_options(lang_codes):

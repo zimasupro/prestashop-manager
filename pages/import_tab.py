@@ -1,10 +1,12 @@
-from nicegui import ui, events
 from dataclasses import dataclass
-import pandas as pd
 from io import StringIO
-from etl.validator import validate
+
+import pandas as pd
+from nicegui import events, ui
+
 from etl.importer import import_products_csv
-from i18n import t
+from etl.validator import validate
+from translator import t
 
 
 @dataclass

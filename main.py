@@ -1,34 +1,60 @@
 import os
-from nicegui import ui, app
-from auth import AuthMiddleware
-from pages.login import login_page
-from pages.dashboard import dashboard_page
-from config import STORAGE_SECRET
-from pages.setup import setup_page
+
 from fastapi import Response
-from pwa import init_pwa
+from fastapi.staticfiles import StaticFiles
+from nicegui import app, ui
+
+from authenticator import AuthMiddleware
+from env import STORAGE_SECRET
+from pages.dashboard import dashboard_page
+from pages.login import login_page
+from pages.setup import setup_page
+
+if not STORAGE_SECRET:
+    raise ValueError("STORAGE_SECRET is required in .env")
 
 app.add_middleware(AuthMiddleware)
-init_pwa()
+
+if not os.path.isdir("static"):
+    raise FileNotFoundError("static directory is required")
+
+if not os.path.isfile("static/manifest.json"):
+    raise FileNotFoundError("static/manifest.json is required")
+
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
+)
+
+ui.add_head_html(
+    """
+    <meta name="theme-color" content="#1976d2">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
+    """,
+    shared=True,
+)
 
 
 @ui.page("/")
-def index():
+def serve_login():
     login_page()
 
 
 @ui.page("/dashboard")
-def dashboard():
+def serve_dashboard():
     dashboard_page()
 
 
 @ui.page("/setup")
-def setup():
+def serve_setup():
     setup_page()
 
 
 @app.get("/health")
-def health():
+def check_health():
     return Response("OK", status_code=200)
 
 

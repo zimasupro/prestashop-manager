@@ -218,3 +218,5 @@ TRANSLATIONS = {
 }
 
 DEFAULT_LANGUAGE = "de"
+
+UNRESTRICTED_ROUTES = {"/", "/setup"}

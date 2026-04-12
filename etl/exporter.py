@@ -1,9 +1,11 @@
 import os
-import pandas as pd
-from presta.client import get_products, get_languages, get_product
-from settings import MULTILANG_FIELDS, FLAT_FIELDS, COLUMN_ORDER
 import tempfile
 import uuid
+
+import pandas as pd
+
+from presta.client import get_languages, get_product, get_products
+from settings import COLUMN_ORDER, FLAT_FIELDS, MULTILANG_FIELDS
 
 
 def flatten_multilang(value, lang_map):

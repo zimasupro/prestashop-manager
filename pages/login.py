@@ -1,10 +1,11 @@
-from nicegui import ui, app
-from config import APP_USERNAME, APP_PASSWORD
-from i18n import t
+from nicegui import ui
+
+from authenticator import is_authenticated, login, verify_credentials
+from translator import translate as t
 
 
 def login_page():
-    if app.storage.user.get("authenticated", False):
+    if is_authenticated():
         ui.navigate.to("/dashboard")
         return
 
@@ -16,8 +17,8 @@ def login_page():
         password = ui.input(t("password"), password=True).classes("w-64")
 
         def handle_login():
-            if username.value == APP_USERNAME and password.value == APP_PASSWORD:
-                app.storage.user["authenticated"] = True
+            if verify_credentials(username.value, password.value):
+                login()
                 ui.navigate.to("/dashboard")
             else:
                 ui.notify(t("wrong_credentials"), type="negative", position="top")

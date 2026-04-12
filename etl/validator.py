@@ -1,7 +1,9 @@
-from bs4 import BeautifulSoup
-import pandas as pd
 import re
-from settings import DESCRIPTION_FIELDS, REQUIRED_FIELDS, ALLOWED_TAGS
+
+import pandas as pd
+from bs4 import BeautifulSoup
+
+from settings import ALLOWED_TAGS, DESCRIPTION_FIELDS, REQUIRED_FIELDS
 
 
 def clean_html(raw_html: str) -> tuple[str, list[str]]:
