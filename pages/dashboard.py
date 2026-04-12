@@ -1,29 +1,22 @@
 from nicegui import ui
 
-from etl.exporter import export_products_csv
+from pages.export_tab import export_tab
+from pages.import_tab import import_tab
 from presta.client import get_languages
-from settings import (
-    ALWAYS_INCLUDED_FIELDS,
-    DEFAULT_EXPORT_FIELDS,
-    FLAT_FIELDS,
-    MULTILANG_FIELDS,
-    PRIMARY_COLOR,
-)
+from settings import PRIMARY_COLOR
 from translator import get_lang, set_lang, t
 
-
-def build_field_options(lang_codes):
-    options = []
-    for field in MULTILANG_FIELDS:
-        for lang in lang_codes:
-            options.append(f"{field}_{lang}")
-    return options + FLAT_FIELDS
+NAV_ITEMS = [
+    ("home", "overview", "Overview"),
+    ("upload", "export", "tab_export"),
+    ("download", "import", "tab_import"),
+    ("analytics", "abcxyz", "ABC-XYZ"),
+]
 
 
 def dashboard_page():
     ui.colors(primary=PRIMARY_COLOR)
 
-    # --- GUARDED: unwrap Result from get_languages ---
     lang_result = get_languages()
     if not lang_result["ok"]:
         with ui.column().classes("w-full max-w-lg mx-auto p-8 gap-4 items-center"):
@@ -37,23 +30,25 @@ def dashboard_page():
         return
 
     lang_codes = [lang["iso_code"] for lang in lang_result["value"]]
+    active_page = {"value": "overview"}
 
-    options = build_field_options(lang_codes)
-    selected_fields = {field: field in DEFAULT_EXPORT_FIELDS for field in options}
-
-    ui.notify(t("welcome"), type="positive", position="top")
-
-    with ui.column().classes("w-full max-w-5xl mx-auto p-8 gap-6"):
+    with ui.header().classes("items-center justify-between px-4").style(
+        f"background:{PRIMARY_COLOR}"
+    ):
+        ui.button(icon="menu", on_click=lambda: drawer.toggle()).props(
+            "flat dense color=white"
+        )
+        ui.label("🛒 PrestaShop Manager").classes("text-white font-bold text-lg")
 
         @ui.refreshable
         def lang_switcher():
-            with ui.row().classes("gap-4 items-center"):
-                for code, label in {"en": "EN", "de": "DE", "id": "ID"}.items():
+            with ui.row().classes("gap-3 items-center"):
+                for code in ["en", "de", "id"]:
                     is_active = get_lang() == code
-                    ui.label(label).classes(
-                        "cursor-pointer font-bold underline text-primary"
+                    ui.label(code.upper()).classes(
+                        "cursor-pointer font-bold text-white underline"
                         if is_active
-                        else "cursor-pointer text-gray-400 hover:text-primary"
+                        else "cursor-pointer text-white opacity-60 hover:opacity-100"
                     ).on(
                         "click",
                         lambda c=code: (
@@ -63,88 +58,53 @@ def dashboard_page():
                         ),
                     )
 
-        with ui.row().classes("w-full justify-between items-center"):
-            ui.label("🛒 PrestaShop Manager").classes("text-3xl font-bold")
-            lang_switcher()
+        lang_switcher()
 
-        @ui.refreshable
-        def page_content():
-            with ui.tabs().classes("w-full") as tabs:
-                tab_export = ui.tab(t("tab_export"))
-                tab_import = ui.tab(t("tab_import"))
+    with ui.left_drawer(value=False).classes("bg-white shadow-lg") as drawer:
+        ui.label("Menu").classes(
+            "text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 pt-4 pb-2"
+        )
+        ui.separator()
+        for icon, key, label in NAV_ITEMS:
+            display = (
+                label
+                if key == "abcxyz"
+                else t(label) if label.startswith("tab_") else label
+            )
+            ui.item(
+                display,
+                on_click=lambda k=key: (
+                    active_page.update({"value": k}),
+                    drawer.hide(),
+                    page_content.refresh(),
+                ),
+            ).props(
+                f"clickable v-ripple {'active' if active_page['value'] == key else ''}"
+            ).classes(
+                "text-primary font-semibold" if active_page["value"] == key else ""
+            )
 
-            with ui.tab_panels(tabs, value=tab_export).classes("w-full"):
+    @ui.refreshable
+    def page_content():
+        page = active_page["value"]
+        with ui.column().classes("w-full max-w-5xl mx-auto p-6 gap-6"):
+            if page == "overview":
+                ui.label("Overview").classes("text-2xl font-bold")
+                ui.label(
+                    "Coming soon — metrics, health indicators, quick actions."
+                ).classes("text-gray-400")
 
-                with ui.tab_panel(tab_export):
-                    with ui.card().classes("w-full p-6").style(
-                        "box-shadow: 0 2px 8px rgba(0,0,0,0.10)"
-                    ):
-                        ui.label(t("export_title")).classes("text-lg font-semibold")
-                        ui.separator()
+            elif page == "export":
+                with ui.card().classes("w-full p-6"):
+                    export_tab(lang_codes)
 
-                        checkboxes = {}
-                        with ui.column().classes("gap-1 w-full py-2"):
-                            for field in options:
-                                checkboxes[field] = ui.checkbox(
-                                    field, value=selected_fields[field]
-                                ).bind_value(selected_fields, field)
+            elif page == "import":
+                with ui.card().classes("w-full p-6"):
+                    import_tab()
 
-                        ui.separator()
+            elif page == "abcxyz":
+                ui.label("ABC-XYZ Analysis").classes("text-2xl font-bold")
+                ui.label("Coming soon.").classes("text-gray-400")
 
-                        with ui.row().classes(
-                            "w-full justify-between items-center mt-2"
-                        ):
-                            with ui.row().classes("gap-2"):
-                                ui.button(
-                                    t("select_all"),
-                                    on_click=lambda: [
-                                        cb.set_value(True) for cb in checkboxes.values()
-                                    ],
-                                ).props("flat dense")
-                                ui.button(
-                                    t("clear"),
-                                    on_click=lambda: [
-                                        cb.set_value(False)
-                                        for cb in checkboxes.values()
-                                    ],
-                                ).props("flat dense")
-
-                            def handle_export():
-                                selected = ALWAYS_INCLUDED_FIELDS + [
-                                    f for f, v in selected_fields.items() if v
-                                ]
-                                if len(selected) <= len(ALWAYS_INCLUDED_FIELDS):
-                                    ui.notify(
-                                        t("export_select_one"),
-                                        type="warning",
-                                        position="top",
-                                    )
-                                    return
-                                try:
-                                    path = export_products_csv(fields=selected)
-                                    ui.notify(
-                                        t("export_success"),
-                                        type="positive",
-                                        position="top",
-                                    )
-                                    ui.download(path)
-                                except Exception as e:
-                                    ui.notify(
-                                        f"{t('export_failed')}: {e}",
-                                        type="negative",
-                                        position="top",
-                                    )
-
-                            ui.button(t("export_button"), on_click=handle_export).props(
-                                "color=primary unelevated icon=download"
-                            )
-
-                from pages.import_tab import import_tab
-
-                with ui.tab_panel(tab_import):
-                    with ui.card().classes("w-full p-6").style(
-                        "box-shadow: 0 2px 8px rgba(0,0,0,0.10)"
-                    ):
-                        import_tab()
-
-        page_content()
+    ui.notify(t("welcome"), type="positive", position="top")
+    page_content()
