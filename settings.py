@@ -217,4 +217,49 @@ TRANSLATIONS = {
     },
 }
 
+ABC_DEFAULTS = {"threshold_a": 0.70, "threshold_b": 0.90}
+XYZ_DEFAULTS = {"threshold_x": 0.30, "threshold_y": 0.60}
+SLIDER_BOUNDS = {
+    "abc_a": (50, 80),
+    "abc_b": (81, 95),
+    "xyz_x": (0.10, 0.50),
+    "xyz_y": (0.51, 0.80),
+}
+ABC_COLORS = {"A": "#2ecc71", "B": "#f39c12", "C": "#e74c3c"}
+ABCXYZ_INTERPRETATIONS = {
+    "AX": "⭐ High value, stable demand — prioritize stock",
+    "AY": "⭐ High value, variable demand — monitor closely",
+    "AZ": "⚠️ High value, irregular demand — safety stock needed",
+    "BX": "✅ Medium value, stable demand — standard replenishment",
+    "BY": "✅ Medium value, variable demand — review periodically",
+    "BZ": "🔶 Medium value, irregular demand — review ordering",
+    "CX": "📦 Low value, stable demand — consider lean stock",
+    "CY": "📦 Low value, variable demand — reduce stock",
+    "CZ": "❌ Low value, irregular demand — consider discontinuing",
+}
+
 DEFAULT_LANGUAGE = "de"
+
+ABC_DEFAULTS = {"threshold_a": 0.70, "threshold_b": 0.90}
+XYZ_DEFAULTS = {"threshold_x": 0.30, "threshold_y": 0.60}
+
+SLIDER_BOUNDS = {
+    "abc_a": (50, 80),
+    "abc_b": (81, 95),
+    "xyz_x": (0.10, 0.50),
+    "xyz_y": (0.51, 0.80),
+}
+
+ABC_COLORS = {"A": "#2ecc71", "B": "#f39c12", "C": "#e74c3c"}
+
+ABCXYZ_INTERPRETATIONS = {
+    "AX": "⭐ High value, stable demand — prioritize stock",
+    "AY": "⭐ High value, variable demand — monitor closely",
+    "AZ": "⚠️ High value, irregular demand — safety stock needed",
+    "BX": "✅ Medium value, stable demand — standard replenishment",
+    "BY": "✅ Medium value, variable demand — review periodically",
+    "BZ": "🔶 Medium value, irregular demand — review ordering",
+    "CX": "📦 Low value, stable demand — consider lean stock",
+    "CY": "📦 Low value, variable demand — reduce stock",
+    "CZ": "❌ Low value, irregular demand — consider discontinuing",
+}

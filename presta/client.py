@@ -293,3 +293,43 @@ def create_product(fields: dict, lang_map: dict) -> dict:
         return _ok(result)
     except Exception as e:
         return _handle_exception(e)
+
+
+def get_orders() -> dict:
+    try:
+        data = _get("orders", params={"limit": "0"})
+        orders = data.get("orders", [])
+        return _ok(orders)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def get_order_details() -> dict:
+    try:
+        data = _get("order_details", params={"limit": "0"})
+        details = data.get("order_details", [])
+        return _ok(details)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def get_orders() -> dict:
+    try:
+        data = _get("orders", params={"limit": "0"})
+        orders = data.get("orders", [])
+        if not orders:
+            return _err("No orders found. The store may have no order history.")
+        return _ok(orders)
+    except Exception as e:
+        return _handle_exception(e)
+
+
+def get_order_details() -> dict:
+    try:
+        data = _get("order_details", params={"limit": "0"})
+        details = data.get("order_details", [])
+        if not details:
+            return _err("No order details found.")
+        return _ok(details)
+    except Exception as e:
+        return _handle_exception(e)
